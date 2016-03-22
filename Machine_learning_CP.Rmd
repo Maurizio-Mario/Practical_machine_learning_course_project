@@ -5,8 +5,47 @@ date: "21 March 2016"
 output: html_document
 ---
 
-# 1. Introduction
+```{r setoption, cache=TRUE, warning=FALSE, message=FALSE, fig.width=12}
+knitr::opts_chunk$set(cache=TRUE, warning=FALSE, message=FALSE, fig.width=12)
+```
+```{r, loadlattice}
+library(lattice)
+library(knitr)
+library(caret)
+```
 
-Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: <http://groupware.les.inf.puc-rio.br/har> (see the section on the Weight Lifting Exercise Dataset).
+### 1. Introduction
 
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, the goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: <http://groupware.les.inf.puc-rio.br/har> (see the section on the Weight Lifting Exercise Dataset).
+
+The goal  is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+### 2. Data exploration
+
+In first place I load the `train` dataset and the `submit_test` will be uploaded for evaluation.
+
+```{r intro.1 data load}
+#download files
+train_url <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+download.file(url=train_url, destfile="training.csv")
+
+test_url <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(url=test_url, destfile="testing.csv")
+
+#read in training and testing data
+
+train <- read.csv("training.csv", na.strings=c("NA","#DIV/0!",""))
+submit_test <- read.csv("testing.csv", na.strings=c("NA","#DIV/0!",""))
+```
+
+Dimensions of the two datasets
+
+Let's collect few more information on the variable `classe` that we will have to predict. Their distribution suggest me that a standardization will not be necessary.
+
+```{r intro.3 check columns names}
+histogram(~classe,  data = train,
+          main = "Class of excercise")
+summary(train$classe)
+featurePlot(train, ~.)
+```
 
