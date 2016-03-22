@@ -20,11 +20,11 @@ Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible t
 
 The goal  is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
 
-### 2. Data exploration
+### 2. Data exploration and cleaning
 
 In first place I load the `train` dataset and the `submit_test` will be uploaded for evaluation.
 
-```{r intro.1 data load}
+```{r exp.1 data load}
 #download files
 train_url <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
 download.file(url=train_url, destfile="training.csv")
@@ -38,14 +38,46 @@ train <- read.csv("training.csv", na.strings=c("NA","#DIV/0!",""))
 submit_test <- read.csv("testing.csv", na.strings=c("NA","#DIV/0!",""))
 ```
 
-Dimensions of the two datasets
+Dimensions of the two datasets, NAs count and variables overview:
 
-Let's collect few more information on the variable `classe` that we will have to predict. Their distribution suggest me that a standardization will not be necessary.
+```{r exp.2 dimensions}
+dim(train); dim(submit_test)
+```
 
-```{r intro.3 check columns names}
+The `train` dataframe has many variables with a relevant amount of missing data, probably due to problems of data relevation. I will drop them, considering a really high cutpoint: 90%.
+
+```{r exp.3, results='hide'}
+na_count <-sapply(train, function(y) sum(length(which(is.na(y)))))
+na_count <- data.frame(na_count)
+```
+
+The resulting dataset is thinner and more easily manageable. The `submit_test` dataset is reduced to the same dimensions, via column names comparison. An empty column `classe` is added.
+
+```{r exp.4 reducing datasets}
+summary(na_count)
+
+# Eliminate variables with many NAs in "train".
+
+train <- train[, ((na_count)/nrow(train)) < 0.9]
+dim(train)
+nam_tr <- names(train)
+nam_su <- names(submit_test)
+
+# Same operation on "submit test".
+
+nam_tr %in% nam_su
+setdiff(nam_tr, nam_su)
+
+submit_test <- submit_test[, intersect(nam_tr, nam_su)]
+submit_test$classe <- NA
+dim(submit_test)
+```
+
+Let's collect few more information on the variable `classe` that we will have to predict in `submit_test`. Its distribution suggests that a standardization will not be necessary.
+
+```{r intro.5 check columns names}
 histogram(~classe,  data = train,
           main = "Class of excercise")
-summary(train$classe)
-featurePlot(train, ~.)
+
 ```
 
