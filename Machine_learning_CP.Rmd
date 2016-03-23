@@ -36,54 +36,13 @@ download.file(url=train_url, destfile="training.csv")
 test_url <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
 download.file(url=test_url, destfile="testing.csv")
 
-#read in training and testing data
+# Read in training and testing data
 
 train <- read.csv("training.csv", na.strings=c("NA","#DIV/0!",""))
 submit_test <- read.csv("testing.csv", na.strings=c("NA","#DIV/0!",""))
 ```
 
-### 2.2 Missing data 
-
-Dimensions of the two datasets, NAs count and variables overview:
-
-```{r exp.2 dimensions}
-dim(train); dim(submit_test)
-```
-
-The `train` dataframe has many variables with a relevant amount of missing data, probably due to problems of data relevation. I will drop them, considering a really high cutpoint: 90%.
-
-```{r exp.3, results='hide'}
-na_count <-sapply(train, function(y) sum(length(which(is.na(y)))))
-na_count <- data.frame(na_count)
-```
-
-The resulting dataset is thinner and more easily manageable. The `submit_test` dataset is reduced to the same dimensions, via column names comparison. An empty column `classe` is added.
-
-```{r exp.4 reducing datasets}
-summary(na_count)
-
-# Eliminate variables with many NAs in dataset "train". Cutpoint 90%.
-
-train_cut <- train[, ((na_count)/nrow(train)) < 0.9]
-dim(train_cut)
-
-names_tr <- names(train_cut)
-names_su <- names(submit_test)
-
-# Same operation on "submit test".
-
-nam_tr %in% nam_su
-setdiff(nam_tr, nam_su)
-
-submit_test <- submit_test[, intersect(nam_tr, nam_su)]
-submit_test$classe <- NA
-
-levels(submit_test$classe) <- levels(training$classe)
-
-dim(submit_test); dim(train)
-```
-
-### 2.3 Data splitting and training set exploration
+### 2.2 Data splitting and training set exploration
 
 Now lets create a training and a testing data set, by splitting the `train` dataset in `training` and `testing`.
 
@@ -97,7 +56,7 @@ testing <- train[-in_train,]
 dim(training); dim(testing); dim(submit_test)
 ```
 
-Let's collect few more information on the variable `classe` that we will have to predict in `submit_test`. Its distribution suggests that a standardization will not be necessary.
+A rapid panoramic view of the `classe` variable that we will have to predict in `submit_test`. Its distribution suggests that a standardization should not be necessary.
 
 ```{r exp.6 classe}
 histogram(~classe,  data = training,
@@ -107,3 +66,66 @@ summary(training$classe)
 paste(round(prop.table(table(training$classe))*100, 2), "%", sep = "")
 ```
 
+## 3. Selecting the features
+
+The `train` dataframe has many variables with a relevant amount of missing data. I will drop them, considering a really high cutpoint: 90%. This values depends by the particular distribution of missing data across the `train` dataframe. 
+
+```{r exp.3, results='hide'}
+na_count <-sapply(training, function(y) sum(length(which(is.na(y)))))
+na_count <- data.frame(na_count)
+```
+
+The resulting dataset is thinner and more easily manageable. The `submit_test` dataset is reduced to the same dimensions, via column names comparison. An empty column `classe` is added.
+
+```{r exp.4 reducing datasets}
+summary(na_count)
+
+# Eliminate variables with many NAs in dataset "train". Cutpoint 90%.
+
+training_cut <- training[, ((na_count)/nrow(training)) < 0.9]
+
+dim(training_cut)
+```
+
+Now, I am going to remove columns that are  not predictors and with near zero variance:
+
+```{r exp. 5}
+training_cut2 <- training_cut[,8:length(training_cut)]
+
+zero_var <- nearZeroVar(training_cut2, saveMetrics = TRUE)
+zero_var 
+```
+
+## 4. Random Forest Model
+
+Random forest model to build is appropriate for a classification problem, according to the lectures. Hence, I fit my model on training data first, and on the testing data used for cross validation.
+
+```{r forest.1}
+set.seed(1234)
+model_fit <- randomForest(classe~., data = training_cut2)
+print(model_fit)
+```
+
+Cross validation `testing` for out-of-sample error.
+
+```{r forest.2}
+prediction_1 <- predict(model_fit, testing, type = "class")
+confusionMatrix(testing$classe, prediction_1)
+```
+
+Cross validation for in-sample error
+
+```{r forest.3}
+prediction_2 <- predict(model_fit, training_cut2, type = "class")
+confusionMatrix(training_cut2$classe, prediction_2)
+```
+
+## 5. Prediction
+
+Model applied to `submit_test` Upon submission all predictions were correct!
+
+```{r pred.1}
+prediction_submit <- predict(model_fit, submit_test, type = "class")
+print(prediction_submit)
+table(prediction_submit)
+```
