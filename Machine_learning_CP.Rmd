@@ -12,15 +12,19 @@ knitr::opts_chunk$set(cache=TRUE, warning=FALSE, message=FALSE, fig.width=12)
 library(lattice)
 library(knitr)
 library(caret)
+library(e1071)
+library(randomForest)
 ```
 
-### 1. Introduction
+## 1. Introduction
 
 Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, the goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: <http://groupware.les.inf.puc-rio.br/har> (see the section on the Weight Lifting Exercise Dataset).
 
 The goal  is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
 
-### 2. Data exploration and cleaning
+## 2. Data exploration and cleaning
+
+### 2.1 Data load 
 
 In first place I load the `train` dataset and the `submit_test` will be uploaded for evaluation.
 
@@ -37,6 +41,8 @@ download.file(url=test_url, destfile="testing.csv")
 train <- read.csv("training.csv", na.strings=c("NA","#DIV/0!",""))
 submit_test <- read.csv("testing.csv", na.strings=c("NA","#DIV/0!",""))
 ```
+
+### 2.2 Missing data 
 
 Dimensions of the two datasets, NAs count and variables overview:
 
@@ -73,11 +79,54 @@ submit_test$classe <- NA
 dim(submit_test)
 ```
 
+### 2.3 Data splitting and training set exploration
+
+Now lets create a training and a testing data set, by splitting the `train` dataset in `training` and `testing`.
+
+```{r exp.5 splitting test set}
+set.seed(1234)
+in_train <- createDataPartition(y = train$classe,
+                                p = 0.75,
+                                list = FALSE)
+training <- train[in_train,]
+testing <- train[-in_train,]
+dim(training)
+```
+
 Let's collect few more information on the variable `classe` that we will have to predict in `submit_test`. Its distribution suggests that a standardization will not be necessary.
 
-```{r intro.5 check columns names}
-histogram(~classe,  data = train,
+```{r exp.6 classe}
+histogram(~classe,  data = training,
           main = "Class of excercise")
 
+summary(training$classe)
+paste(round(prop.table(table(training$classe))*100, 2), "%", sep = "")
+
+
 ```
+
+### 2.4 Dropping redundant features
+
+By now, the dataset consists of sixty variables. I am going to reduce this number by pointing out the most relevant ones. Thus, I hope to reduce the redundancy and explore them with more detail. Following the general rule, I will remove attributes with an absolute correlation of 0.75 or higher.
+
+```{r exp.7 correlation matrix}
+training_classes <- sapply(training, class)
+training_classes[c(2, 5, 6, 60)]
+table(training_classes)
+
+# First isolate the factor variables
+cor_matrix <- cor(as.matrix(training[, -c(2, 5, 6, 60)]))
+
+# Find features that are highly correlated and remove them.
+hi_cor <- findCorrelation(cor_matrix, cutoff = 0.75)
+
+training <- training[-hi_cor]        
+testing <- testing[-hi_cor]
+submit_test <- submit_test[-hi_cor]
+dim(training)
+```
+
+## 3. Training a Random Forest Model
+
+I decided to use the random forest model since it is appropriate for a classification problem such the one we have to solve for this dataset. 
 
