@@ -1,5 +1,5 @@
 ---
-title: "Machine learning - Course project [Ongoing]"
+title: "Machine learning - Course project"
 author: "Maurizio Murino"
 date: "21 March 2016"
 output: html_document
@@ -26,9 +26,9 @@ The goal  is to predict the manner in which they did the exercise. This is the "
 
 ### 2.1 Data load 
 
-In first place I load the `train` dataset and the `submit_test` will be uploaded for evaluation.
+In first place I load the `train` dataset and the `submit_test` that will be uploaded for evaluation.
 
-```{r exp.1 data load}
+```{r exp.1 data load, cache=TRUE}
 #download files
 train_url <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
 download.file(url=train_url, destfile="training.csv")
@@ -75,12 +75,12 @@ na_count <-sapply(training, function(y) sum(length(which(is.na(y)))))
 na_count <- data.frame(na_count)
 ```
 
-The resulting dataset is thinner and more easily manageable. The `submit_test` dataset is reduced to the same dimensions, via column names comparison. An empty column `classe` is added.
+The resulting dataset is thinner and more easily manageable. 
 
 ```{r exp.4 reducing datasets}
 summary(na_count)
 
-# Eliminate variables with many NAs in dataset "train". Cutpoint 90%.
+# Eliminate variables with many NAs in dataset "training". Cutpoint 90%.
 
 training_cut <- training[, ((na_count)/nrow(training)) < 0.9]
 
@@ -93,12 +93,11 @@ Now, I am going to remove columns that are  not predictors and with near zero va
 training_cut2 <- training_cut[,8:length(training_cut)]
 
 zero_var <- nearZeroVar(training_cut2, saveMetrics = TRUE)
-zero_var 
 ```
 
 ## 4. Random Forest Model
 
-Random forest model to build is appropriate for a classification problem, according to the lectures. Hence, I fit my model on training data first, and on the testing data used for cross validation.
+Random forest model is appropriate for a classification problem, according to the lectures. Hence, I fit my model on training data first, and on the testing data used for cross validation.
 
 ```{r forest.1}
 set.seed(1234)
@@ -122,7 +121,7 @@ confusionMatrix(training_cut2$classe, prediction_2)
 
 ## 5. Prediction
 
-Model applied to `submit_test` Upon submission all predictions were correct!
+Model applied to `submit_test`. At first upload, 19 out of 20 resulted correct.
 
 ```{r pred.1}
 prediction_submit <- predict(model_fit, submit_test, type = "class")
